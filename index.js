@@ -10,7 +10,7 @@ var pixels = new Array(10)
 for(var i = 0; i < 10; i++){
     pixels[i] = new Array(10)
     for(var j = 0; j < 10; j++){
-        pixels[i][j] = 1
+        pixels[i][j] = (i + j) % 5
     }
 }
 
@@ -23,12 +23,16 @@ app.use(express.static('public'))
 
 io.on('connection', function(socket){
     console.log('A user has connected: ', socket.id)
-    
-    console.log('Sent canvas to ' + socket.id)
+
     io.to(socket.id).emit('canvas', pixels)  
   
     socket.on('disconnect', function(socket){
         console.log('A user has disconnected!')
+    })
+    
+    socket.on('draw', function(drawing){
+        console.log('draw')
+        io.emit('draw', drawing)
     })
 })
 

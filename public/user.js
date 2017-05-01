@@ -1,21 +1,46 @@
 var socket = io()
+
+var canvas = document.getElementById('cnvs')
+var ctx = canvas.getContext('2d')
+
 var colors = ['white', 'black', 'red', 'blue', 'green']
-var pixels, ctx = document.getElementById('cnvs').getContext('2d')
+var pixels
 
-
-socket.on('canvas', receivePixels)
-
-function receivePixels(px){
-    console.log('Got canvas')
+canvas.addEventListener('click', function(e){
+    console.log(e.clientX / 80 + '\n' + e.clientY / 80)
     
+    var loc = getPixel(e)
+    
+    pixels[loc.x][loc.y] = 0
+    
+    drawCanvas()
+    
+    socket.emit('draw', {'x': x, 'y': y, 'c': 0})
+})
+
+socket.on('canvas', function(px){
     pixels = px
-    
-    for(row in pixels){
-        for(col in row){
-            ctx.fillStyle = colors[pixels[row][col]]
-            ctx.fillRect(col * 10, row * 10, col * 10 + 10, row * 10 + 10)
+    drawCanvas()
+})
+
+socket.on('draw', function(drawing){
+    pixels[drawing.x][drawing.y] = drawing.c
+    drawCanvas()
+})
+
+function drawCanvas(){
+    for(var x = 0; x < 10; x++){
+        for(var y = 0; y < 10; y++){
+            ctx.fillStyle = colors[pixels[x][y]]
+            ctx.fillRect(x * 80, y * 80, 80, 80)
         }
     }
-    
-    console.log(pixels)
+}
+
+function getPixel(e) {
+    var rect = canvas.getBoundingClientRect()
+    return {
+      x: Math.floor((e.clientX - rect.left) / 80) % 10,
+      y: Math.floor((e.clientY - rect.top) / 80) % 10
+    }
 }
