@@ -1,21 +1,25 @@
-var socket = io()
-
-var canvas = document.getElementById('cnvs')
-var ctx = canvas.getContext('2d')
-
-var colors = ['white', 'black', 'red', 'blue', 'green']
-var pixels
+var socket = io(),
+    canvas = document.getElementById('cnvs'),
+    ctx = canvas.getContext('2d'),
+    colors = ['white', 'black', 'red', 'blue', 'green'],
+    pixels
 
 canvas.addEventListener('click', function(e){
     console.log(e.clientX / 80 + '\n' + e.clientY / 80)
     
     var loc = getPixel(e)
     
-    pixels[loc.x][loc.y] = 0
+    pixels[loc.x][loc.y] += 1
+    
+    socket.emit('draw', {
+        'x': loc.x,
+        'y': loc.y,
+        'c': pixels[loc.x][loc.y]
+        }, function(response){
+            console.log(response)
+        })
     
     drawCanvas()
-    
-    socket.emit('draw', {'x': x, 'y': y, 'c': 0})
 })
 
 socket.on('canvas', function(px){
