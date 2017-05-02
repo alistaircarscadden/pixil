@@ -4,12 +4,18 @@ var express = require('express'),
     app     = express(),
     server  = http.Server(app),
     io      = socket(server),
-    pixels = new Array(10)
+    dimensions = {'width': 40,
+                  'height': 40}
+    pixels = new Array(dimensions.width)
 
-for(var i = 0; i < 10; i++){
-    pixels[i] = new Array(10)
-    for(var j = 0; j < 10; j++){
-        pixels[i][j] = 0
+for(var i = 0; i < dimensions.width; i++){
+    pixels[i] = new Array(dimensions.height)
+    for(var j = 0; j < dimensions.height; j++){
+        pixels[i][j] = {
+            'r': 255,
+            'g': 255,
+            'b': 255
+        }
     }
 }
 
@@ -33,9 +39,10 @@ app.use(express.static('public'))
 
 
 io.on('connection', function(socket){
-    console.log('A user has connected: ', socket.id)
+    var time = new Date(Date.now()).toDateString()
+    console.log('[' + time + '] A user has connected: ', socket.id)
 
-    io.to(socket.id).emit('canvas', pixels)  
+    io.to(socket.id).emit('canvas', {'width': dimensions.width, 'height': dimensions.height, 'pixels': pixels})
   
     socket.on('disconnect', function(socket){
         console.log('A user has disconnected!')
@@ -45,10 +52,15 @@ io.on('connection', function(socket){
         /* Clean input */
         drawing.x = Math.floor(drawing.x)
         drawing.y = Math.floor(drawing.y)
-        drawing.c = Math.floor(drawing.c)
-        drawing.x %= 10
-        drawing.x %= 10
-        drawing.c %= 5
+        drawing.c.r = Math.floor(drawing.c.r)
+        drawing.c.g = Math.floor(drawing.c.g)
+        drawing.c.b = Math.floor(drawing.c.b)
+        
+        drawing.x %= dimensions.width
+        drawing.x %= dimensions.height
+        drawing.c.r %= 255
+        drawing.c.g %= 255
+        drawing.c.b %= 255
         
         /* Update */
         pixels[drawing.x][drawing.y] = drawing.c
