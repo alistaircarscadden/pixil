@@ -1,0 +1,23 @@
+body {
+    background: #111111;
+            }
+
+#header_container {
+    display: flex;
+    justify-content: center;
+}
+
+#header {
+    font-family: "Verdana", "Arial", sans-serif;
+    color: white;
+}
+
+#main {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#color_div {
+    margin-left: 100px;
+}

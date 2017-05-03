@@ -19,14 +19,27 @@ var canvas = document.getElementById('cnvs'),
             'r': 0,
             'g': 0,
             'b': 0
-        }
+        },
+        'button': -1
     }
 
+// Prevent right click context menu
+canvas.addEventListener('contextmenu', function(e){
+    e.preventDefault()
+})
+
+// Prevent double click/dragging selections on page
+canvas.onmousedown = function(){
+    return false;
+}
+
+// Mouse functions
 canvas.addEventListener('mousedown', function(e){
+    drawing.button = e.button
     drawing.current = true
     drawing.loc = getPixel(canvas, e)
 
-    drawPixel(drawing.loc, drawing.color)
+    drawPixel(drawing.loc, drawing.button == 0 ? drawing.color : {'r': 255, 'g': 255, 'b' : 255})
 })
 
 canvas.addEventListener('mousemove', function(e){
@@ -41,31 +54,30 @@ canvas.addEventListener('mousemove', function(e){
     }
     
     drawing.loc = loc
-    drawPixel(drawing.loc, drawing.color)
+    drawPixel(drawing.loc, drawing.button == 0 ? drawing.color : {'r': 255, 'g': 255, 'b' : 255})
 })
 
-canvas.addEventListener('mouseup', function(e){
+canvas.addEventListener('mouseup', stopDrawing)
+canvas.addEventListener('mouseout', stopDrawing)
+
+function stopDrawing(){
+    drawing.button = -1
     drawing.current = false
-})
-
-canvas.addEventListener('mouseout', function(e){
-    drawing.current = false
-})
-
-canvas.onmousedown = function(){
-    return false;
 }
 
+// Data given to new clients when connecting
 socket.on('canvas', function(data){
     canvasData = data
     drawCanvas()
 })
 
+// Drawings from other users
 socket.on('draw', function(drawing){
     canvasData.pixels[drawing.x][drawing.y] = drawing.c
     drawCanvas()
 })
 
+// Send drawing to server and change pixels locally
 function drawPixel(loc, color){
     socket.emit('draw', {
             'x': loc.x,
@@ -77,6 +89,7 @@ function drawPixel(loc, color){
     drawCanvas()
 }
 
+// Update canvas with current pixels
 function drawCanvas(){
     for(var x = 0; x < canvasData.width; x++){
         for(var y = 0; y < canvasData.height; y++){
@@ -86,20 +99,22 @@ function drawCanvas(){
     }
 }
 
-function getPixel(canvas, e){
-    var position = getPosition(canvas, e)
+// Get coordinate position of a MouseEvent within a canvas
+function getPosition(canvas, mouseEvent){
+    var rect = canvas.getBoundingClientRect()
+    return {
+      'x': Math.floor(mouseEvent.clientX - rect.left),
+      'y': Math.floor(mouseEvent.clientY - rect.top)
+    }
+}
+
+// Get coordinate indices of "pixel" that a canvas coordinate is within
+function getPixel(canvas, mouseEvent){
+    var position = getPosition(canvas, mouseEvent)
 
     return {
       'x': Math.floor(position.x / (800 / canvasData.width)) % canvasData.width,
       'y': Math.floor(position.y / (800 / canvasData.height)) % canvasData.height
-    }
-}
-
-function getPosition(canvas, e){
-    var rect = canvas.getBoundingClientRect()
-    return {
-      'x': Math.floor(e.clientX - rect.left),
-      'y': Math.floor(e.clientY - rect.top)
     }
 }
 
@@ -113,6 +128,7 @@ var cp_canvas = document.getElementById('colors'),
         'b': 0
     }
 
+// Fill canvas with gradients
 for(var x = 0; x < 256; x++){
     for(var y = 0; y < 256; y++){
         color = HSVtoRGB(x / 256.0, 1, y / 256.0)
@@ -121,6 +137,7 @@ for(var x = 0; x < 256; x++){
     }
 }
 
+// Respond to choosing new colours
 cp_canvas.addEventListener('mousedown', function(e){
     var position = getPosition(cp_canvas, e)
     
@@ -128,8 +145,6 @@ cp_canvas.addEventListener('mousedown', function(e){
     console.log(color)
     drawing.color = color
 })
-
-
 
 function HSVtoRGB(h, s, v) {
     var r, g, b, i, f, p, q, t;

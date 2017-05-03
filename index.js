@@ -1,6 +1,7 @@
 var express = require('express'),
     http    = require('http'),
     socket  = require('socket.io'),
+    fs      = require('fs'),
     app     = express(),
     server  = http.Server(app),
     io      = socket(server),
@@ -8,39 +9,29 @@ var express = require('express'),
                   'height': 40}
     pixels = new Array(dimensions.width)
 
+// Initialize pixels to a pretty blue gradient
 for(var i = 0; i < dimensions.width; i++){
     pixels[i] = new Array(dimensions.height)
     for(var j = 0; j < dimensions.height; j++){
         pixels[i][j] = {
-            'r': 255,
-            'g': 255,
+            'r': Math.floor(155 + 100*(j/dimensions.height)),
+            'g': Math.floor(155 + 100*(j/dimensions.height)),
             'b': 255
         }
     }
 }
 
-app.get('/', function(request, response){
-    response.sendFile(__dirname + '/index.html')
-})
-
-app.get(/\/[0-9]+/, function(request, response){
-    var number = request.url.match(/\/([0-9]+)/)[1]
-    var str = ''
-    for(var i = 1; i <= number.length - 1; i++) {
-        var a = parseInt(number.substring(0, i))
-        var b = parseInt(number.substring(i, number.length))
-        str += a + ' + ' + b + ' = ' + (a + b) + '<br>'
-    }
-
-    response.send('<!doctype html><head></head><body><pre>' + str + '</pre></body>')
-})
-
+// '/public' folder contents to be accessible to anyone
 app.use(express.static('public'))
 
+// When a user hits <domain>/ send them the index file
+app.get('/', function(request, response){
+    response.sendFile(__dirname + '/public/index.html')
+})
 
+// When a new socket is connected
 io.on('connection', function(socket){
-    var time = new Date(Date.now()).toDateString()
-    console.log('[' + time + '] A user has connected: ', socket.id)
+    console.log('A user has connected!')
 
     io.to(socket.id).emit('canvas', {'width': dimensions.width, 'height': dimensions.height, 'pixels': pixels})
   
@@ -50,6 +41,10 @@ io.on('connection', function(socket){
     
     socket.on('draw', function(drawing){
         /* Clean input */
+        if(!isNumber(drawing.x) || !isNumber(drawing.y) || !isNumber(drawing.c.r) || !isNumber(drawing.c.g) || !isNumber(drawing.c.b)){
+            return;
+        }
+
         drawing.x = Math.floor(drawing.x)
         drawing.y = Math.floor(drawing.y)
         drawing.c.r = Math.floor(drawing.c.r)
@@ -70,6 +65,20 @@ io.on('connection', function(socket){
     })
 })
 
+// Any unhandled exceptions thrown will be printed, for example if users input unexpected data
+process.on('uncaughtException', function (err) {
+  console.error((new Date).toUTCString() + ' uncaughtException:', err.message)
+  console.error(err.stack)
+})
+
+function isNumber(n) {
+  return !isNaN(parseFloat(n)) && isFinite(n);
+}
+
 server.listen(3000, function(){
     console.log('Listening on Port :3000')
 })
+
+function saveCanvas(name) {
+    fs.writeFile('./saves/' + name + '.json', JSON.stringify(pixels, null, 0) , 'utf-8')
+}
