@@ -1,6 +1,6 @@
 var socket = io();
-var canvas = document.getElementById('cnvs'),
-var ctx = canvas.getContext('2d'),
+var canvas = document.getElementById('cnvs');
+var ctx = canvas.getContext('2d');
 var canvasData = {
         width: 0,
         height: 0,

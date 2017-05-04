@@ -6,23 +6,25 @@ var app     = express();
 var server  = http.Server(app);
 var io      = socket(server);
 var canvasData = {
-        width:  40,
-        height: 40,
-        pixels = null
+        width:  3,
+        height: 3,
+        pixels: null
     };
 
 // Initialize pixels to a pretty blue gradient
-canvasData = new Array(dimensions.width);
-for(var i = 0; i < dimensions.width; i++) {
-    pixels[i] = new Array(dimensions.height);
-    for(var j = 0; j < dimensions.height; j++) {
-        pixels[i][j] = {
+canvasData.pixels = new Array(canvasData.width);
+for(var i = 0; i < canvasData.width; i++) {
+    canvasData.pixels[i] = new Array(canvasData.height);
+    for(var j = 0; j < canvasData.height; j++) {
+        canvasData.pixels[i][j] = {
             r: 255,
             g: 255,
             b: 255
         };
     }
 }
+
+console.log(canvasData)
 
 // '/public' folder contents to be accessible to anyone
 app.use(express.static('public'));
@@ -42,7 +44,7 @@ io.on('connection', function(socket) {
     
     socket.on('draw', function(drawing) {
         if(!validateDrawing(drawing)) return;
-        pixels[drawing.x][drawing.y] = drawing.c;
+        canvasData.pixels[drawing.x][drawing.y] = drawing.c;
         socket.broadcast.emit('draw', drawing);
     });
 });
@@ -58,7 +60,7 @@ server.listen(3000, function() {
 });
 
 function saveCanvas(name) {
-    fs.writeFile('./saves/' + name + '.json', JSON.stringify(pixels, null, 0) , 'utf-8');
+    fs.writeFile('./saves/' + name + '.json', JSON.stringify(canvasData.pixels, null, 0) , 'utf-8');
 }
 
 function isNumber(n) {
@@ -80,8 +82,8 @@ function validateDrawing(drawing) {
     drawing.c.g = Math.floor(drawing.c.g);
     drawing.c.b = Math.floor(drawing.c.b);
        
-    drawing.x   %= dimensions.width;
-    drawing.x   %= dimensions.height;
+    drawing.x   %= canvasData.width;
+    drawing.x   %= canvasData.height;
     drawing.c.r %= 256;
     drawing.c.g %= 256;
     drawing.c.b %= 256;
