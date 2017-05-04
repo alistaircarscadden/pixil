@@ -1,150 +1,144 @@
-var socket = io()
-
-/* Main Canvas */
-
+var socket = io();
 var canvas = document.getElementById('cnvs'),
-    ctx = canvas.getContext('2d'),
-    canvasData = {
-        'width': 0,
-        'height': 0,
-        'pixels': null
-    },
-    drawing = {
-        'current': false,
-        'loc': {
-            'x': 0,
-            'y': 0
+var ctx = canvas.getContext('2d'),
+var canvasData = {
+        width: 0,
+        height: 0,
+        pixels: null
+    };
+var drawing = {
+        current: false,
+        loc: {
+            x: 0,
+            y: 0
         },
-        'color': {
-            'r': 0,
-            'g': 0,
-            'b': 0
+        color: {
+            r: 0,
+            g: 0,
+            b: 0
         },
-        'button': -1
-    }
+        button: -1
+    };
+var cp_canvas = document.getElementById('colors');
+var cp_ctx = cp_canvas.getContext("2d");
 
 // Prevent right click context menu
-canvas.addEventListener('contextmenu', function(e){
-    e.preventDefault()
-})
+canvas.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+});
 
 // Prevent double click/dragging selections on page
-canvas.onmousedown = function(){
+canvas.onmousedown = function() {
     return false;
-}
+};
 
-// Mouse functions
-canvas.addEventListener('mousedown', function(e){
-    drawing.button = e.button
-    drawing.current = true
-    drawing.loc = getPixel(canvas, e)
+canvas.addEventListener('mousedown', function(e) {
+    drawing.button = e.button;
+    drawing.current = true;
+    drawing.loc = getPixel(canvas, e);
 
-    drawPixel(drawing.loc, drawing.button == 0 ? drawing.color : {'r': 255, 'g': 255, 'b' : 255})
-})
+    drawPixel(drawing.loc, drawing.button == 0 ? drawing.color : {'r': 255, 'g': 255, 'b' : 255});
+});
 
-canvas.addEventListener('mousemove', function(e){
-    if(!drawing.current){
+canvas.addEventListener('mousemove', function(e) {
+    if(!drawing.current) {
         return;
     }
     
-    var loc = getPixel(canvas, e)
+    var loc = getPixel(canvas, e);
     
-    if(loc.x == drawing.loc.x && loc.y == drawing.loc.y){
+    if(loc.x == drawing.loc.x && loc.y == drawing.loc.y) {
         return;
     }
     
-    drawing.loc = loc
-    drawPixel(drawing.loc, drawing.button == 0 ? drawing.color : {'r': 255, 'g': 255, 'b' : 255})
-})
+    drawing.loc = loc;
+    drawPixel(drawing.loc, drawing.button == 0 ? drawing.color : {'r': 255, 'g': 255, 'b' : 255});
+});
 
-canvas.addEventListener('mouseup', stopDrawing)
-canvas.addEventListener('mouseout', stopDrawing)
+canvas.addEventListener('mouseup', function() {
+    drawing.button = -1;
+    drawing.current = false;
+});
 
-function stopDrawing(){
-    drawing.button = -1
-    drawing.current = false
-}
+canvas.addEventListener('mouseout', function() {
+    drawing.button = -1;
+    drawing.current = false;
+});
 
-// Data given to new clients when connecting
-socket.on('canvas', function(data){
-    canvasData = data
-    drawCanvas()
-})
+// Data received on connect
+socket.on('canvas', function(data) {
+    canvasData = data;
+    drawCanvas();
+});
 
 // Drawings from other users
-socket.on('draw', function(drawing){
-    canvasData.pixels[drawing.x][drawing.y] = drawing.c
-    drawCanvas()
-})
+socket.on('draw', function(drawing) {
+    canvasData.pixels[drawing.x][drawing.y] = drawing.c;
+    drawCanvas();
+});
+
+// Fill colour picker canvas with gradients
+for(var x = 0; x < 256; x++) {
+    for(var y = 0; y < 256; y++) {
+        color = HSVtoRGB(x / 256.0, 1, y / 256.0);
+        cp_ctx.fillStyle = 'rgb(' + color.r + ',' + color.g + ',' + color.b + ')';
+        cp_ctx.fillRect(x, y, 1, 1);
+    }
+}
+
+// Respond to choosing new colours
+cp_canvas.addEventListener('mousedown', function(e) {
+    var position = getPosition(cp_canvas, e);
+    
+    var color = HSVtoRGB(position.x / 256, 1, position.y / 256);
+    console.log(color);
+    drawing.color = color;
+});
+
+//
+// Functions
+//
 
 // Send drawing to server and change pixels locally
-function drawPixel(loc, color){
+function drawPixel(loc, color) {
     socket.emit('draw', {
-            'x': loc.x,
-            'y': loc.y,
-            'c': color
-        })
+            x: loc.x,
+            y: loc.y,
+            c: color
+        });
     
-    canvasData.pixels[loc.x][loc.y] = color
-    drawCanvas()
+    canvasData.pixels[loc.x][loc.y] = color;
+    drawCanvas();
 }
 
 // Update canvas with current pixels
-function drawCanvas(){
-    for(var x = 0; x < canvasData.width; x++){
-        for(var y = 0; y < canvasData.height; y++){
-            ctx.fillStyle = 'rgb(' + canvasData.pixels[x][y].r + ',' + canvasData.pixels[x][y].g + ',' + canvasData.pixels[x][y].b + ')'
-            ctx.fillRect(x * (800 / canvasData.width), y * (800 / canvasData.height), (800 / canvasData.width), (800 / canvasData.height))
+function drawCanvas() {
+    for(var x = 0; x < canvasData.width; x++) {
+        for(var y = 0; y < canvasData.height; y++) {
+            ctx.fillStyle = 'rgb(' + canvasData.pixels[x][y].r + ',' + canvasData.pixels[x][y].g + ',' + canvasData.pixels[x][y].b + ')';
+            ctx.fillRect(x * (800 / canvasData.width), y * (800 / canvasData.height), (800 / canvasData.width), (800 / canvasData.height));
         }
     }
 }
 
 // Get coordinate position of a MouseEvent within a canvas
-function getPosition(canvas, mouseEvent){
-    var rect = canvas.getBoundingClientRect()
+function getPosition(canvas, mouseEvent) {
+    var rect = canvas.getBoundingClientRect();
     return {
-      'x': Math.floor(mouseEvent.clientX - rect.left),
-      'y': Math.floor(mouseEvent.clientY - rect.top)
-    }
+      x: Math.floor(mouseEvent.clientX - rect.left),
+      y: Math.floor(mouseEvent.clientY - rect.top)
+    };
 }
 
 // Get coordinate indices of "pixel" that a canvas coordinate is within
-function getPixel(canvas, mouseEvent){
-    var position = getPosition(canvas, mouseEvent)
+function getPixel(canvas, mouseEvent) {
+    var position = getPosition(canvas, mouseEvent);
 
     return {
-      'x': Math.floor(position.x / (800 / canvasData.width)) % canvasData.width,
-      'y': Math.floor(position.y / (800 / canvasData.height)) % canvasData.height
-    }
+      x: Math.floor(position.x / (800 / canvasData.width)) % canvasData.width,
+      y: Math.floor(position.y / (800 / canvasData.height)) % canvasData.height
+    };
 }
-
-/* Color Picker Canvas */
-
-var cp_canvas = document.getElementById('colors'),
-    cp_ctx = cp_canvas.getContext("2d"),
-    cp_curcol = {
-        'r': 0,
-        'g': 0,
-        'b': 0
-    }
-
-// Fill canvas with gradients
-for(var x = 0; x < 256; x++){
-    for(var y = 0; y < 256; y++){
-        color = HSVtoRGB(x / 256.0, 1, y / 256.0)
-        cp_ctx.fillStyle = 'rgb(' + color.r + ',' + color.g + ',' + color.b + ')'
-        cp_ctx.fillRect(x, y, 1, 1)
-    }
-}
-
-// Respond to choosing new colours
-cp_canvas.addEventListener('mousedown', function(e){
-    var position = getPosition(cp_canvas, e)
-    
-    var color = HSVtoRGB(position.x / 256, 1, position.y / 256)
-    console.log(color)
-    drawing.color = color
-})
 
 function HSVtoRGB(h, s, v) {
     var r, g, b, i, f, p, q, t;
